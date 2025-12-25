@@ -41,13 +41,13 @@ spec:
               cpu: "500m"
           livenessProbe:
             httpGet:
-              path: /.well-known/health-check
+              path: /.well-known/alive
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 15
           readinessProbe:
             httpGet:
-              path: /.well-known/health-check
+              path: /.well-known/alive
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
