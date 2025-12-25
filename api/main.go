@@ -14,6 +14,7 @@ func main() {
 
 	// API routes (under /api prefix)
 	app.GET("/api/poems", handlers.ListPoems)
+	app.GET("/api/poems/featured", handlers.GetFeaturedPoem)
 	app.GET("/api/poems/search", handlers.SearchPoems)
 	app.GET("/api/poems/{slug}", handlers.GetPoem)
 	app.GET("/api/poems/{slug}/comments", handlers.GetPoemComments)
@@ -26,6 +27,7 @@ func main() {
 	app.GET("/api/tags", handlers.GetTags)
 
 	// Serve static frontend files (SPA)
+	// GoFr uses 404.html as fallback for SPA routing
 	app.AddStaticFiles("/", "./static")
 
 	app.Run()

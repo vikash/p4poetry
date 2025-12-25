@@ -14,15 +14,32 @@ import (
 )
 
 type RecoveredPoem struct {
-	URL         string   `json:"url"`
-	Title       string   `json:"title"`
-	Author      string   `json:"author"`
-	AuthorURL   string   `json:"author_url"`
-	Date        string   `json:"date"`
-	ContentText string   `json:"content_text"`
-	ContentHTML string   `json:"content_html"`
-	Tags        []string `json:"tags"`
-	ExtractedAt string   `json:"extracted_at"`
+	URL         string            `json:"url"`
+	Title       string            `json:"title"`
+	Author      string            `json:"author"`
+	AuthorURL   string            `json:"author_url"`
+	Date        string            `json:"date"`
+	ContentText string            `json:"content_text"`
+	ContentHTML string            `json:"content_html"`
+	Tags        []string          `json:"tags"`
+	ExtractedAt string            `json:"extracted_at"`
+	Comments    []RecoveredComment `json:"comments"`
+}
+
+type RecoveredComment struct {
+	Author    string `json:"author"`
+	Timestamp string `json:"timestamp"`
+	Text      string `json:"text"`
+	IsReply   bool   `json:"is_reply"`
+}
+
+// authorAliases maps old/duplicate slugs to canonical slugs
+// This ensures poems from the same author under different names get merged
+var authorAliases = map[string]string{
+	"nirala":                  "suryakant-tripathi-nirala",
+	"admin":                   "vikash",
+	"anandavalli-r-chandran":  "medhini",
+	// Add more aliases as discovered
 }
 
 func main() {
@@ -74,8 +91,10 @@ func main() {
 
 			// Get or create author
 			authorName := poem.Author
-			if authorName == "" {
-				authorName = "Unknown"
+			if authorName == "" || strings.ToLower(authorName) == "unknown" {
+				// Skip poems without proper author attribution
+				skipped++
+				return nil
 			}
 			// Try to extract clean slug from author URL first, fallback to name
 			authorSlug := extractSlugFromURL(poem.AuthorURL)
@@ -88,6 +107,12 @@ func main() {
 				if urlSlug := extractSlugFromURL(poem.AuthorURL); urlSlug != "" && isASCII(urlSlug) {
 					authorSlug = urlSlug
 				}
+			}
+
+			// Apply author alias mapping to merge duplicates
+			if canonical, exists := authorAliases[authorSlug]; exists {
+				fmt.Printf("Mapping author slug '%s' -> '%s'\n", authorSlug, canonical)
+				authorSlug = canonical
 			}
 
 			authorID, exists := authorCache[authorSlug]
@@ -149,7 +174,7 @@ func main() {
 			}
 
 			// Insert poem
-			_, err = ctx.SQL.ExecContext(ctx,
+			result, err := ctx.SQL.ExecContext(ctx,
 				`INSERT INTO poems (author_id, slug, title, content_text, content_html,
 				                    language, tags, original_url, original_date)
 				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -160,6 +185,41 @@ func main() {
 				fmt.Printf("Error inserting poem '%s': %v\n", poem.Title, err)
 				errors++
 				return nil
+			}
+
+			poemID, _ := result.LastInsertId()
+
+			// Insert comments if any
+			if len(poem.Comments) > 0 {
+				for _, comment := range poem.Comments {
+					// Parse comment timestamp
+					var commentDate *string
+					if comment.Timestamp != "" {
+						parsed := parseCommentDate(comment.Timestamp)
+						if parsed != "" {
+							commentDate = &parsed
+						}
+					}
+
+					// Try to match comment author to existing author
+					var commentAuthorID *int64
+					var matchedID int64
+					err = ctx.SQL.QueryRowContext(ctx,
+						"SELECT id FROM authors WHERE LOWER(name) = LOWER(?)",
+						comment.Author).Scan(&matchedID)
+					if err == nil {
+						commentAuthorID = &matchedID
+					}
+
+					_, err = ctx.SQL.ExecContext(ctx,
+						`INSERT INTO comments (poem_id, author_id, author_name, content, commented_at)
+						 VALUES (?, ?, ?, ?, ?)`,
+						poemID, commentAuthorID, comment.Author, comment.Text, commentDate)
+					if err != nil {
+						// Don't fail on comment errors, just log
+						fmt.Printf("  Warning: failed to insert comment: %v\n", err)
+					}
+				}
 			}
 
 			imported++
@@ -299,6 +359,37 @@ func parseDate(dateStr string) string {
 		t, err := time.Parse(format, dateStr)
 		if err == nil {
 			return t.Format("2006-01-02")
+		}
+	}
+
+	return ""
+}
+
+func parseCommentDate(dateStr string) string {
+	// Comment timestamps like "30 May, 2009 @2:07 pm" or "May 30th, 2009 at 5:48 pm"
+	// Clean up the string first
+	dateStr = strings.ReplaceAll(dateStr, "@", "")
+	dateStr = strings.ReplaceAll(dateStr, " at ", " ")
+	dateStr = strings.ReplaceAll(dateStr, "th,", ",")
+	dateStr = strings.ReplaceAll(dateStr, "st,", ",")
+	dateStr = strings.ReplaceAll(dateStr, "nd,", ",")
+	dateStr = strings.ReplaceAll(dateStr, "rd,", ",")
+	dateStr = strings.TrimSpace(dateStr)
+
+	formats := []string{
+		"2 January, 2006 3:04 pm",
+		"2 Jan, 2006 3:04 pm",
+		"January 2, 2006 3:04 pm",
+		"Jan 2, 2006 3:04 pm",
+		"2 January 2006 3:04 pm",
+		"January 2, 2006",
+		"2 January, 2006",
+	}
+
+	for _, format := range formats {
+		t, err := time.Parse(format, dateStr)
+		if err == nil {
+			return t.Format("2006-01-02 15:04:05")
 		}
 	}
 

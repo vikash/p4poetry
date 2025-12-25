@@ -128,6 +128,28 @@ func GetPoem(ctx *gofr.Context) (any, error) {
 	return p, nil
 }
 
+func GetFeaturedPoem(ctx *gofr.Context) (any, error) {
+	query := `
+		SELECT p.id, p.author_id, a.name, a.slug, p.slug, p.title,
+		       p.content_text, p.language, p.created_at
+		FROM poems p
+		JOIN authors a ON p.author_id = a.id
+		ORDER BY RAND()
+		LIMIT 1
+	`
+
+	var p models.Poem
+	err := ctx.SQL.QueryRowContext(ctx, query).Scan(
+		&p.ID, &p.AuthorID, &p.AuthorName, &p.AuthorSlug,
+		&p.Slug, &p.Title, &p.ContentText, &p.Language, &p.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
 func SearchPoems(ctx *gofr.Context) (any, error) {
 	q := ctx.Param("q")
 	if q == "" {

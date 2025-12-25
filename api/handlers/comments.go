@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"time"
 
 	"gofr.dev/pkg/gofr"
@@ -9,6 +10,8 @@ import (
 type Comment struct {
 	ID          int64      `json:"id"`
 	PoemID      int64      `json:"poem_id"`
+	AuthorID    *int64     `json:"author_id,omitempty"`
+	AuthorSlug  string     `json:"author_slug,omitempty"`
 	AuthorName  string     `json:"author_name"`
 	Content     string     `json:"content"`
 	CommentedAt *time.Time `json:"commented_at,omitempty"`
@@ -25,9 +28,13 @@ func GetPoemComments(ctx *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	// Get comments for this poem
+	// Get comments for this poem with author info if linked
 	rows, err := ctx.SQL.QueryContext(ctx,
-		"SELECT id, poem_id, author_name, content, commented_at, created_at FROM comments WHERE poem_id = ? ORDER BY commented_at ASC",
+		`SELECT c.id, c.poem_id, c.author_id, a.slug, c.author_name, c.content, c.commented_at, c.created_at
+		 FROM comments c
+		 LEFT JOIN authors a ON c.author_id = a.id
+		 WHERE c.poem_id = ?
+		 ORDER BY c.created_at ASC`,
 		poemID)
 	if err != nil {
 		return nil, err
@@ -37,9 +44,17 @@ func GetPoemComments(ctx *gofr.Context) (any, error) {
 	var comments []Comment
 	for rows.Next() {
 		var c Comment
-		err := rows.Scan(&c.ID, &c.PoemID, &c.AuthorName, &c.Content, &c.CommentedAt, &c.CreatedAt)
+		var authorID sql.NullInt64
+		var authorSlug sql.NullString
+		err := rows.Scan(&c.ID, &c.PoemID, &authorID, &authorSlug, &c.AuthorName, &c.Content, &c.CommentedAt, &c.CreatedAt)
 		if err != nil {
 			return nil, err
+		}
+		if authorID.Valid {
+			c.AuthorID = &authorID.Int64
+		}
+		if authorSlug.Valid {
+			c.AuthorSlug = authorSlug.String
 		}
 		comments = append(comments, c)
 	}

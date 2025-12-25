@@ -10,14 +10,12 @@ export default function Home() {
   useEffect(() => {
     Promise.all([
       fetch('/api/stats').then(r => r.json()),
-      fetch('/api/poems?per_page=7').then(r => r.json())
-    ]).then(([statsData, poemsData]) => {
+      fetch('/api/poems/featured').then(r => r.json()),
+      fetch('/api/poems?per_page=6').then(r => r.json())
+    ]).then(([statsData, featuredData, poemsData]) => {
       setStats(statsData.data)
-      const poems = poemsData.data?.poems || []
-      if (poems.length > 0) {
-        setFeaturedPoem(poems[0])
-        setRecentPoems(poems.slice(1, 7))
-      }
+      setFeaturedPoem(featuredData.data)
+      setRecentPoems(poemsData.data?.poems || [])
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])

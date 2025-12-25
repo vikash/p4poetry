@@ -45,12 +45,15 @@ const createCommentsTable = `
 CREATE TABLE IF NOT EXISTS comments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     poem_id BIGINT NOT NULL,
+    author_id BIGINT,
     author_name VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     commented_at DATETIME,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (poem_id) REFERENCES poems(id) ON DELETE CASCADE,
-    INDEX idx_comments_poem (poem_id)
+    FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE SET NULL,
+    INDEX idx_comments_poem (poem_id),
+    INDEX idx_comments_author (author_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 `
 
