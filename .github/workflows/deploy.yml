@@ -55,5 +55,6 @@ jobs:
           kubectl apply -f k8s/configmap.yaml
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
           kubectl set image deployment/p4poetry app=$GCR_REGISTRY/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }} -n $NAMESPACE
           kubectl rollout status deployment/p4poetry -n $NAMESPACE --timeout=120s
