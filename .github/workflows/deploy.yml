@@ -1,0 +1,59 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: opengittr
+  GCR_REGISTRY: gcr.io
+  IMAGE_NAME: p4poetry
+  GKE_CLUSTER: opengittr
+  GKE_ZONE: us-central1-c
+  NAMESPACE: p4poetry
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build -t $GCR_REGISTRY/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }} .
+          docker tag $GCR_REGISTRY/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }} $GCR_REGISTRY/$PROJECT_ID/$IMAGE_NAME:latest
+
+      - name: Push Docker image
+        run: |
+          docker push $GCR_REGISTRY/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }}
+          docker push $GCR_REGISTRY/$PROJECT_ID/$IMAGE_NAME:latest
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_ZONE }}
+
+      - name: Deploy to GKE
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/configmap.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl set image deployment/p4poetry app=$GCR_REGISTRY/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }} -n $NAMESPACE
+          kubectl rollout status deployment/p4poetry -n $NAMESPACE --timeout=120s

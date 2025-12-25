@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: p4poetry-config
+  namespace: p4poetry
+data:
+  APP_NAME: "p4poetry-api"
+  HTTP_PORT: "8080"
+  METRICS_PORT: "2125"
+  DB_DIALECT: "mysql"
+  DB_PORT: "3306"
+  LOG_LEVEL: "INFO"

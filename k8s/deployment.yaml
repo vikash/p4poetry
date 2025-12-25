@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: p4poetry
+  namespace: p4poetry
+  labels:
+    app: p4poetry
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: p4poetry
+  template:
+    metadata:
+      labels:
+        app: p4poetry
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "2125"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: app
+          image: gcr.io/opengittr/p4poetry:latest
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 2125
+              name: metrics
+          envFrom:
+            - configMapRef:
+                name: p4poetry-config
+            - secretRef:
+                name: p4poetry-db-secret
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /.well-known/health-check
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /.well-known/health-check
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10

@@ -1,0 +1,38 @@
+# Recovery scripts and data (local only)
+recovered_poems/
+recover_poems.py
+requirements.txt
+venv/
+scripts/
+*.pyc
+__pycache__/
+sample_page.html
+test_unicode.json
+
+# Go
+api/api
+api/bin/
+api/*.exe
+api/*.exe~
+api/*.dll
+api/*.so
+api/*.dylib
+
+# Config (contains secrets)
+api/configs/.local.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Logs
+*.log
