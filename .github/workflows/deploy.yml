@@ -10,8 +10,8 @@ env:
   PROJECT_ID: opengittr
   GCR_REGISTRY: gcr.io
   IMAGE_NAME: p4poetry
-  GKE_CLUSTER: opengittr
-  GKE_ZONE: us-central1-c
+  GKE_CLUSTER: rhealth-cluster
+  GKE_LOCATION: us-central1
   NAMESPACE: p4poetry
 
 jobs:
@@ -47,7 +47,7 @@ jobs:
         uses: google-github-actions/get-gke-credentials@v2
         with:
           cluster_name: ${{ env.GKE_CLUSTER }}
-          location: ${{ env.GKE_ZONE }}
+          location: ${{ env.GKE_LOCATION }}
 
       - name: Deploy to GKE
         run: |
