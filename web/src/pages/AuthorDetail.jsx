@@ -96,15 +96,28 @@ export default function AuthorDetail() {
              style={{ background: 'var(--gradient-primary)' }}></div>
 
         <div className="relative z-10">
-          <div
-            className="avatar-large mx-auto mb-6 shadow-xl"
-            style={{ background: getAvatarGradient(author.name) }}
-          >
-            {author.name?.charAt(0).toUpperCase()}
-          </div>
+          {author.gravatar_url ? (
+            <img
+              src={author.gravatar_url}
+              alt={author.name}
+              className="w-24 h-24 md:w-32 md:h-32 rounded-full mx-auto mb-6 shadow-xl border-4 border-[var(--color-surface-elevated)]"
+            />
+          ) : (
+            <div
+              className="avatar-large mx-auto mb-6 shadow-xl"
+              style={{ background: getAvatarGradient(author.name) }}
+            >
+              {author.name?.charAt(0).toUpperCase()}
+            </div>
+          )}
 
-          <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="font-display text-4xl md:text-5xl font-bold mb-4 flex items-center justify-center gap-3">
             {author.name}
+            {author.claimed && (
+              <svg className="w-6 h-6 text-[var(--color-gold)]" fill="currentColor" viewBox="0 0 20 20" title="Verified">
+                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            )}
           </h1>
 
           <div className="divider-artistic">
@@ -185,31 +198,33 @@ export default function AuthorDetail() {
         )}
       </section>
 
-      {/* Claim Profile CTA */}
-      <section className="mt-16">
-        <div className="glass-card p-8 md:p-12 text-center relative overflow-hidden">
-          <div className="absolute inset-0 opacity-5" style={{ background: 'var(--gradient-primary)' }}></div>
+      {/* Claim Profile CTA - only show if not already claimed */}
+      {!author.claimed && (
+        <section className="mt-16">
+          <div className="glass-card p-8 md:p-12 text-center relative overflow-hidden">
+            <div className="absolute inset-0 opacity-5" style={{ background: 'var(--gradient-primary)' }}></div>
 
-          <div className="relative z-10">
-            <span className="section-label mb-4 inline-block">Is this you?</span>
-            <h3 className="font-display text-2xl font-bold mb-4">
-              Claim this profile
-            </h3>
-            <p className="text-[var(--color-text-muted)] max-w-md mx-auto mb-6">
-              If you're {author.name}, claim your profile to manage your poems, add your bio, and connect with readers who love your work.
-            </p>
-            <a
-              href="mailto:web@p4poetry.com"
-              className="btn-primary inline-flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              Contact Us
-            </a>
+            <div className="relative z-10">
+              <span className="section-label mb-4 inline-block">Is this you?</span>
+              <h3 className="font-display text-2xl font-bold mb-4">
+                Claim this profile
+              </h3>
+              <p className="text-[var(--color-text-muted)] max-w-md mx-auto mb-6">
+                If you're {author.name}, claim your profile to manage your poems, add your bio, and connect with readers who love your work.
+              </p>
+              <a
+                href="mailto:web@p4poetry.com"
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Contact Us
+              </a>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   )
 }

@@ -11,6 +11,7 @@ type Author struct {
 	LegacyURL    string    `json:"legacy_url,omitempty"`
 	Claimed      bool      `json:"claimed"`
 	ClaimedEmail string    `json:"-"` // Don't expose email in API
+	GravatarURL  string    `json:"gravatar_url,omitempty"`
 	PoemCount    int       `json:"poem_count,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 }

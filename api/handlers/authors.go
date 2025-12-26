@@ -1,12 +1,25 @@
 package handlers
 
 import (
+	"crypto/md5"
 	"database/sql"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/vikash/p4poetry/api/models"
 	"gofr.dev/pkg/gofr"
 )
+
+// gravatarURL generates a Gravatar URL from an email address
+func gravatarURL(email string) string {
+	if email == "" {
+		return ""
+	}
+	email = strings.ToLower(strings.TrimSpace(email))
+	hash := md5.Sum([]byte(email))
+	return fmt.Sprintf("https://www.gravatar.com/avatar/%x?d=mp&s=200", hash)
+}
 
 func ListAuthors(ctx *gofr.Context) (any, error) {
 	page, _ := strconv.Atoi(ctx.Param("page"))
@@ -30,7 +43,7 @@ func ListAuthors(ctx *gofr.Context) (any, error) {
 
 	// Get authors with poem count
 	query := `
-		SELECT a.id, a.slug, a.name, a.bio, a.author_type, a.claimed, a.created_at,
+		SELECT a.id, a.slug, a.name, a.bio, a.author_type, a.claimed, a.claimed_email, a.created_at,
 		       COUNT(p.id) as poem_count
 		FROM authors a
 		LEFT JOIN poems p ON a.id = p.author_id
@@ -48,13 +61,16 @@ func ListAuthors(ctx *gofr.Context) (any, error) {
 	var authors []models.Author
 	for rows.Next() {
 		var a models.Author
-		var bio sql.NullString
-		err := rows.Scan(&a.ID, &a.Slug, &a.Name, &bio, &a.AuthorType, &a.Claimed, &a.CreatedAt, &a.PoemCount)
+		var bio, claimedEmail sql.NullString
+		err := rows.Scan(&a.ID, &a.Slug, &a.Name, &bio, &a.AuthorType, &a.Claimed, &claimedEmail, &a.CreatedAt, &a.PoemCount)
 		if err != nil {
 			return nil, err
 		}
 		if bio.Valid {
 			a.Bio = bio.String
+		}
+		if a.Claimed && claimedEmail.Valid {
+			a.GravatarURL = gravatarURL(claimedEmail.String)
 		}
 		authors = append(authors, a)
 	}
@@ -74,7 +90,7 @@ func GetAuthor(ctx *gofr.Context) (any, error) {
 	slug := ctx.PathParam("slug")
 
 	query := `
-		SELECT a.id, a.slug, a.name, a.bio, a.author_type, a.legacy_url, a.claimed, a.created_at,
+		SELECT a.id, a.slug, a.name, a.bio, a.author_type, a.legacy_url, a.claimed, a.claimed_email, a.created_at,
 		       COUNT(p.id) as poem_count
 		FROM authors a
 		LEFT JOIN poems p ON a.id = p.author_id
@@ -83,20 +99,23 @@ func GetAuthor(ctx *gofr.Context) (any, error) {
 	`
 
 	var a models.Author
-	var bio, legacyURL *string
+	var bio, legacyURL, claimedEmail sql.NullString
 
 	err := ctx.SQL.QueryRowContext(ctx, query, slug).Scan(
-		&a.ID, &a.Slug, &a.Name, &bio, &a.AuthorType, &legacyURL, &a.Claimed, &a.CreatedAt, &a.PoemCount,
+		&a.ID, &a.Slug, &a.Name, &bio, &a.AuthorType, &legacyURL, &a.Claimed, &claimedEmail, &a.CreatedAt, &a.PoemCount,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	if bio != nil {
-		a.Bio = *bio
+	if bio.Valid {
+		a.Bio = bio.String
 	}
-	if legacyURL != nil {
-		a.LegacyURL = *legacyURL
+	if legacyURL.Valid {
+		a.LegacyURL = legacyURL.String
+	}
+	if a.Claimed && claimedEmail.Valid {
+		a.GravatarURL = gravatarURL(claimedEmail.String)
 	}
 
 	return a, nil
